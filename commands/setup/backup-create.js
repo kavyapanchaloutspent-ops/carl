@@ -13,14 +13,17 @@ module.exports = {
     try {
       const guild = interaction.guild;
       const roles = guild.roles.cache.filter(r => r.name !== '@everyone' && !r.managed).map(r => ({
+        id: r.id,
         name: r.name,
         color: r.color,
         hoist: r.hoist,
         permissions: r.permissions.bitfield.toString(),
-        mentionable: r.mentionable
+        mentionable: r.mentionable,
+        position: r.position
       }));
 
       const channels = guild.channels.cache.map(c => ({
+        id: c.id,
         name: c.name,
         type: c.type,
         parentId: c.parentId,
@@ -62,14 +65,17 @@ module.exports = {
     try {
       const guild = message.guild;
       const roles = guild.roles.cache.filter(r => r.name !== '@everyone' && !r.managed).map(r => ({
+        id: r.id,
         name: r.name,
         color: r.color,
         hoist: r.hoist,
         permissions: r.permissions.bitfield.toString(),
-        mentionable: r.mentionable
+        mentionable: r.mentionable,
+        position: r.position
       }));
 
       const channels = guild.channels.cache.map(c => ({
+        id: c.id,
         name: c.name,
         type: c.type,
         parentId: c.parentId,

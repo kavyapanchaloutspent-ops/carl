@@ -1,13 +1,24 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../../database');
+
+function hasHighestServerRole(member) {
+  if (member.id === member.guild.ownerId) return true;
+  const highestRole = member.guild.roles.cache
+    .filter(role => role.id !== member.guild.id && !role.managed)
+    .sort((a, b) => b.position - a.position)
+    .first();
+  return Boolean(highestRole && member.roles.cache.has(highestRole.id));
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('backup-create')
-    .setDescription('Tạo bản sao lưu cấu hình máy chủ hiện tại')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDescription('Tạo bản sao lưu cấu hình máy chủ hiện tại'),
 
   async execute(interaction) {
+    if (!hasHighestServerRole(interaction.member)) {
+      return interaction.reply({ content: '❌ Lệnh này chỉ dành cho người có role cao nhất server!', ephemeral: true });
+    }
     await interaction.deferReply({ ephemeral: true });
 
     try {
@@ -56,8 +67,8 @@ module.exports = {
   },
 
   async executePrefix(message, args) {
-    if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
-      return message.reply('❌ Lệnh này yêu cầu quyền Administrator!');
+    if (!hasHighestServerRole(message.member)) {
+      return message.reply('❌ Lệnh này chỉ dành cho người có role cao nhất server!');
     }
 
     const replyMsg = await message.reply('🔄 Đang tiến hành tạo bản sao lưu cấu hình...');

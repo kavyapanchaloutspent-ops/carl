@@ -1,5 +1,14 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const db = require('../../database');
+
+function hasHighestServerRole(member) {
+  if (member.id === member.guild.ownerId) return true;
+  const highestRole = member.guild.roles.cache
+    .filter(role => role.id !== member.guild.id && !role.managed)
+    .sort((a, b) => b.position - a.position)
+    .first();
+  return Boolean(highestRole && member.roles.cache.has(highestRole.id));
+}
 
 async function restoreBackup(guild, data) {
   await guild.roles.fetch();
@@ -43,12 +52,11 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('backup-load')
     .setDescription('Khôi phục cấu hình máy chủ từ mã sao lưu')
-    .addStringOption(opt => opt.setName('code').setDescription('Mã sao lưu của bạn').setRequired(true))
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .addStringOption(opt => opt.setName('code').setDescription('Mã sao lưu của bạn').setRequired(true)),
 
   async execute(interaction) {
-    if (interaction.user.id !== interaction.guild.ownerId) {
-      return interaction.reply({ content: '❌ Lệnh khôi phục máy chủ cực kỳ nguy hiểm, chỉ có Chủ sở hữu máy chủ mới được thực hiện!', ephemeral: true });
+    if (!hasHighestServerRole(interaction.member)) {
+      return interaction.reply({ content: '❌ Lệnh này chỉ dành cho người có role cao nhất server!', ephemeral: true });
     }
 
     const code = interaction.options.getString('code').trim().toUpperCase();
@@ -72,8 +80,8 @@ module.exports = {
   },
 
   async executePrefix(message, args) {
-    if (message.author.id !== message.guild.ownerId) {
-      return message.reply('❌ Lệnh khôi phục máy chủ chỉ có Chủ sở hữu máy chủ mới được sử dụng!');
+    if (!hasHighestServerRole(message.member)) {
+      return message.reply('❌ Lệnh này chỉ dành cho người có role cao nhất server!');
     }
 
     const code = args[0]?.trim().toUpperCase();

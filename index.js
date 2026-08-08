@@ -26,6 +26,7 @@ const client = new Client({
 });
 
 client.commands = new Collection();
+client.snipes = new Collection();
 const slashCommands = [];
 
 // Tự động quét và nạp thư mục lệnh (Command Loader)

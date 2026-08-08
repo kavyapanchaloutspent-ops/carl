@@ -17,6 +17,7 @@ function buildHelpEmbed() {
       `└ \`?autonickname Member | {username}\` *(Tự đổi tên người mới)*\n` +
       `└ \`?autorole\`, \`?customcmd\`, \`?sticky\`, \`?setup-welcome\`, \`?setup-verification\`\n\n` +
       `**🎨 Tiện ích & Đổi biệt danh:**\n` +
+      `└ \`?snipe\` *(Xem lại tin nhắn vừa bị xóa gần đây nhất trong kênh)*\n` +
       `└ \`?nickname all/bots/humans <tên_mới>\` *(Đổi biệt danh hàng loạt)*\n` +
       `└ \`?userinfo <@user|ID>\` *(Tra cứu tài khoản trong & ngoài Server bằng ID)*\n` +
       `└ \`?serverinfo\` *(Xem chi tiết máy chủ & thành viên)*\n` +

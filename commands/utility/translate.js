@@ -40,20 +40,19 @@ async function translateText(text, targetLang = 'vi') {
 }
 
 function buildTranslateEmbed(originalText, result, author) {
-  const srcName = LANG_NAMES[result.detectedLang.toLowerCase()] || `🌐 Mã: \`${result.detectedLang}\``;
-  const targetName = LANG_NAMES[result.targetLang.toLowerCase()] || `🌐 Mã: \`${result.targetLang}\``;
+  const srcName = LANG_NAMES[result.detectedLang.toLowerCase()] || `\`${result.detectedLang.toUpperCase()}\``;
+  const targetName = LANG_NAMES[result.targetLang.toLowerCase()] || `\`${result.targetLang.toUpperCase()}\``;
+
+  const shortOriginal = originalText.length > 100 ? originalText.slice(0, 100) + '...' : originalText;
 
   return new EmbedBuilder()
-    .setColor(0x3498DB)
-    .setTitle('🌐 DỊCH THUẬT ĐA NGÔN NGỮ TỰ ĐỘNG')
-    .addFields(
-      { name: '📥 Ngôn ngữ gốc', value: srcName, inline: true },
-      { name: '📤 Ngôn ngữ dịch', value: targetName, inline: true },
-      { name: '💬 Văn bản gốc', value: `>>> ${originalText.slice(0, 1024)}`, inline: false },
-      { name: '✨ Kết quả dịch', value: `>>> ${result.translatedText.slice(0, 1024)}`, inline: false }
+    .setColor(0x00FF88)
+    .setDescription(
+      `# ✨ ${result.translatedText}\n\n` +
+      `-# 🌐 **Dịch từ:** ${srcName} ➔ ${targetName}\n` +
+      `-# 💬 **Văn bản gốc:** *"${shortOriginal}"*`
     )
-    .setFooter({ text: `Yêu cầu bởi ${author.username}`, iconURL: author.displayAvatarURL({ dynamic: true }) })
-    .setTimestamp();
+    .setFooter({ text: `Yêu cầu bởi ${author.username}`, iconURL: author.displayAvatarURL({ dynamic: true }) });
 }
 
 module.exports = {

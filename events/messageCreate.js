@@ -185,7 +185,7 @@ module.exports = {
             const translatedText = data[0].map(item => item[0]).filter(Boolean).join('');
             const detectedLang = data[2] || '';
             if (detectedLang && detectedLang.toLowerCase() !== targetLang.toLowerCase() && translatedText !== message.content) {
-              await message.reply({ content: `🌐 **Dịch tự động (${detectedLang.toUpperCase()} ➔ ${targetLang.toUpperCase()}):**\n> ${translatedText}` }).catch(() => {});
+              await message.reply({ content: `## ✨ ${translatedText}\n-# 🌐 Dịch tự động (${detectedLang.toUpperCase()} ➔ ${targetLang.toUpperCase()})` }).catch(() => {});
             }
           }
         }

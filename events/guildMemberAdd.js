@@ -33,10 +33,20 @@ module.exports = {
       return;
     }
 
-    // ============ 3. GÁN VAI TRÒ TỰ ĐỘNG (Unverified Role) ============
+    // ============ 3. GÁN VAI TRÒ TỰ ĐỘNG (Autorole) ============
     if (config.autorole_id) {
       const role = member.guild.roles.cache.get(config.autorole_id);
       if (role) await member.roles.add(role).catch(() => {});
+    }
+
+    // ============ 3.5 TỰ ĐỘNG ĐỔI BIỆT DANH (Auto Nickname) ============
+    if (config.auto_nickname_format) {
+      const formattedNick = config.auto_nickname_format
+        .replace(/{username}/g, member.user.username)
+        .replace(/{tag}/g, member.user.tag)
+        .replace(/{server}/g, member.guild.name)
+        .substring(0, 32);
+      await member.setNickname(formattedNick).catch(() => {});
     }
 
     // ============ 4. GỬI TIN CHÀO MỪNG (Welcome Message) ============

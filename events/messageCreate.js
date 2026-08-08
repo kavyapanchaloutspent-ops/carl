@@ -43,59 +43,119 @@ module.exports = {
       return message.channel.send(`⚠️ **${message.author.username}**, liên kết ngoài bị cấm tại kênh chat này!`).then(m => setTimeout(() => m.delete().catch(() => {}), 5000));
     }
 
-    // E. ANTI-SPAM BẢO MẬT (Message rate limiting & mute escalation)
-    if (config.anti_spam_toggle) {
+    // E. ANTI-SPAM THÔNG MINH BẢO MẬT (Rate limiting, Duplicate message detection, Bulk purge & Progressive punishments)
+    if (config.anti_spam_toggle && !message.member.permissions.has('ManageMessages')) {
+      const userKey = `${message.guild.id}:${message.author.id}`;
       const now = Date.now();
-      const userData = antiSpamMap.get(message.author.id) || [];
-      userData.push(now);
+      
+      const userSpamState = antiSpamMap.get(userKey) || { timestamps: [], lastContent: '', duplicateCount: 0 };
+      userSpamState.timestamps.push(now);
 
-      const recentMessages = userData.filter(time => now - time < 5000); // Lọc tin nhắn gửi trong 5 giây qua
-      antiSpamMap.set(message.author.id, recentMessages);
+      // Lọc các tin nhắn trong 5 giây gần đây
+      userSpamState.timestamps = userSpamState.timestamps.filter(time => now - time < 5000);
 
-      if (recentMessages.length > 5) { // Spam quá 5 tin/5 giây
-        await message.delete().catch(() => {}); // Xóa tin nhắn spam
+      // Kiểm tra gửi tin nhắn trùng lặp liên tục
+      const currentContent = message.content.trim().toLowerCase();
+      if (currentContent.length > 2 && currentContent === userSpamState.lastContent) {
+        userSpamState.duplicateCount += 1;
+      } else {
+        userSpamState.lastContent = currentContent;
+        userSpamState.duplicateCount = 1;
+      }
 
-        // Hệ thống đếm số lần vi phạm trong bộ nhớ đệm
-        const violationCount = (spamInfractionMap.get(message.author.id) || 0) + 1;
-        spamInfractionMap.set(message.author.id, violationCount);
+      antiSpamMap.set(userKey, userSpamState);
 
+      const spamLimit = config.anti_spam_limit || 5;
+      const isRateSpam = userSpamState.timestamps.length >= spamLimit;
+      const isDuplicateSpam = userSpamState.duplicateCount >= 3;
+
+      if (isRateSpam || isDuplicateSpam) {
+        // Tự động xóa tin nhắn vi phạm vừa gửi
+        await message.delete().catch(() => {});
+
+        // Thực hiện tự động dọn dẹp các tin nhắn rác vừa gửi trong 15 giây gần đây
+        try {
+          const recentMsgs = await message.channel.messages.fetch({ limit: 20 });
+          const userSpamMsgs = recentMsgs.filter(m => m.author.id === message.author.id && (now - m.createdTimestamp) < 15000);
+          if (userSpamMsgs.size > 0) {
+            await message.channel.bulkDelete(userSpamMsgs, true).catch(() => {});
+          }
+        } catch (e) {
+          // Bỏ qua nếu kênh không đủ quyền bulkDelete
+        }
+
+        // Reset bộ đệm tin nhắn tức thời sau khi phát hiện spam
+        antiSpamMap.set(userKey, { timestamps: [], lastContent: '', duplicateCount: 0 });
+
+        // Tự động giảm mức vi phạm nếu người dùng đã cư xử đúng mực quá 10 phút
+        const infractionState = spamInfractionMap.get(userKey) || { count: 0, lastTime: 0 };
+        if (now - infractionState.lastTime > 10 * 60 * 1000) {
+          infractionState.count = 0;
+        }
+
+        infractionState.count += 1;
+        infractionState.lastTime = now;
+        spamInfractionMap.set(userKey, infractionState);
+
+        const violationCount = infractionState.count;
         const member = await message.guild.members.fetch(message.author.id).catch(() => null);
+        const reasonText = isDuplicateSpam ? 'Anti-Spam: Gửi tin nhắn trùng lặp nhiều lần' : 'Anti-Spam: Gửi tin nhắn quá nhanh';
 
         if (violationCount === 1) {
-          // Lần 1: Cảnh báo 1/5 gửi tin riêng tư qua DM
-          await message.author.send('⚠️ **CẢNH BÁO SPAM (1/5):** Vui lòng không gửi tin nhắn quá nhanh trong máy chủ!').catch(() => {});
-          const pubMsg = await message.channel.send(`⚠️ Phát hiện hành vi spam từ <@${message.author.id}>! Đã xóa tin nhắn và cảnh báo riêng.`);
-          setTimeout(() => pubMsg.delete().catch(() => {}), 5000);
+          // Mức 1: Cảnh báo nhẹ
+          await message.author.send(`⚠️ **CẢNH BÁO SPAM (Máy chủ ${message.guild.name}):** Vui lòng không gửi tin nhắn quá nhanh hoặc lặp lại!`).catch(() => {});
+          const pubMsg = await message.channel.send(`⚠️ <@${message.author.id}>, phát hiện hành vi spam! Đã tự động dọn dẹp tin nhắn. *(Cảnh báo 1/5)*`);
+          setTimeout(() => pubMsg.delete().catch(() => {}), 6000);
         } else if (violationCount === 2) {
-          // Lần 2: Mute 10 giây
+          // Mức 2: Timeout 1 phút
           if (member && member.moderatable) {
-            await member.timeout(10 * 1000, 'Spam lần 2');
-            const pubMsg = await message.channel.send(`🔇 Phát hiện spam từ <@${message.author.id}>! Đã tiến hành cách ly **10 giây** (Cảnh báo 2/5).`);
-            setTimeout(() => pubMsg.delete().catch(() => {}), 5000);
+            await member.timeout(1 * 60 * 1000, reasonText).catch(() => {});
+            const pubMsg = await message.channel.send(`🔇 Phát hiện vi phạm spam từ <@${message.author.id}>! Đã tạm thời cách ly **1 phút** *(Cảnh báo 2/5)*.`);
+            setTimeout(() => pubMsg.delete().catch(() => {}), 7000);
           }
         } else if (violationCount === 3) {
-          // Lần 3: Mute 1 phút
+          // Mức 3: Timeout 10 phút
           if (member && member.moderatable) {
-            await member.timeout(60 * 1000, 'Spam lần 3');
-            const pubMsg = await message.channel.send(`🔇 Phát hiện spam từ <@${message.author.id}>! Đã tiến hành cách ly **1 phút** (Cảnh báo 3/5).`);
-            setTimeout(() => pubMsg.delete().catch(() => {}), 5000);
+            await member.timeout(10 * 60 * 1000, reasonText).catch(() => {});
+            const pubMsg = await message.channel.send(`🔇 Phát hiện vi phạm spam lặp lại từ <@${message.author.id}>! Đã cách ly **10 phút** *(Cảnh báo 3/5)*.`);
+            setTimeout(() => pubMsg.delete().catch(() => {}), 8000);
           }
         } else if (violationCount === 4) {
-          // Lần 4: Mute 30 phút
+          // Mức 4: Timeout 1 giờ + Log bảo mật
           if (member && member.moderatable) {
-            await member.timeout(30 * 60 * 1000, 'Spam lần 4');
-            const pubMsg = await message.channel.send(`🔇 Phát hiện spam từ <@${message.author.id}>! Đã tiến hành cách ly **30 phút** (Cảnh báo 4/5).`);
-            setTimeout(() => pubMsg.delete().catch(() => {}), 5000);
-          }
-        } else if (violationCount >= 5) {
-          // Lần 5+: Mute 1 ngày (86400 giây)
-          if (member && member.moderatable) {
-            await member.timeout(24 * 60 * 60 * 1000, 'Spam lần 5');
-            const pubMsg = await message.channel.send(`🔇 Phát hiện spam nghiêm trọng từ <@${message.author.id}>! Đã cách ly **1 ngày** (Cảnh báo 5/5).`);
+            await member.timeout(60 * 60 * 1000, reasonText).catch(() => {});
+            const pubMsg = await message.channel.send(`🚨 <@${message.author.id}> vi phạm spam nhiều lần! Đã cách ly **1 giờ** *(Cảnh báo 4/5)*.`);
             setTimeout(() => pubMsg.delete().catch(() => {}), 10000);
           }
+        } else if (violationCount >= 5) {
+          // Mức 5+: Timeout 24 giờ + Log bảo mật
+          if (member && member.moderatable) {
+            await member.timeout(24 * 60 * 60 * 1000, reasonText).catch(() => {});
+            const pubMsg = await message.channel.send(`⛔ Hành vi spam nghiêm trọng từ <@${message.author.id}>! Đã khóa tài khoản **24 giờ** *(Cảnh báo 5/5)*.`);
+            setTimeout(() => pubMsg.delete().catch(() => {}), 12000);
+          }
         }
-        return; // Dừng xử lý các logic khác của tin nhắn này
+
+        // Ghi log vào kênh nhật ký bảo mật nếu đã cấu hình log_channel_id
+        if (config.log_channel_id && violationCount >= 3) {
+          const logChannel = message.guild.channels.cache.get(config.log_channel_id);
+          if (logChannel) {
+            const { EmbedBuilder } = require('discord.js');
+            const logEmbed = new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle('🛡️ NHẬT KÝ BẢO MẬT: PHÁT HIỆN SPAM')
+              .addFields(
+                { name: '👤 Người vi phạm', value: `<@${message.author.id}> (\`${message.author.id}\`)`, inline: true },
+                { name: '📌 Kênh vi phạm', value: `<#${message.channel.id}>`, inline: true },
+                { name: '⚠️ Mức cảnh báo', value: `Cảnh cáo cấp **${violationCount}/5**`, inline: true },
+                { name: '📝 Lý do', value: reasonText, inline: false }
+              )
+              .setTimestamp();
+            logChannel.send({ embeds: [logEmbed] }).catch(() => {});
+          }
+        }
+
+        return; // Dừng xử lý tiếp các logic tin nhắn này
       }
     }
 

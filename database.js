@@ -26,8 +26,15 @@ async function initDatabase() {
         anti_nuke_limit INT DEFAULT 3,
         anti_raid_limit INT DEFAULT 10,
         alt_age_limit INT DEFAULT 3,
+        anti_spam_limit INT DEFAULT 5,
         created_at TIMESTAMP DEFAULT NOW()
       )
+    `);
+
+    // Migrations cho bảng guild_configs nếu bảng đã tồn tại từ trước
+    await client.query(`
+      ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS anti_spam_limit INT DEFAULT 5;
+      ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS auto_nickname_format TEXT;
     `);
 
     // 2. Nhật ký cảnh cáo (Warnings)
@@ -87,7 +94,7 @@ async function getGuildConfig(guildId) {
   const res = await pool.query('SELECT * FROM guild_configs WHERE guild_id = $1', [guildId]);
   if (res.rows.length === 0) {
     await pool.query('INSERT INTO guild_configs (guild_id) VALUES ($1)', [guildId]);
-    return { guild_id: guildId, prefix: '?', anti_spam_toggle: false, anti_link_toggle: false, anti_mention_limit: 5 };
+    return { guild_id: guildId, prefix: '?', anti_spam_toggle: false, anti_spam_limit: 5, anti_link_toggle: false, anti_mention_limit: 5 };
   }
   return res.rows[0];
 }

@@ -82,6 +82,30 @@ async function initDatabase() {
       )
     `);
 
+    // 6. Lịch sử đổi tên (User Name History)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_name_history (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        old_name TEXT,
+        new_name TEXT,
+        change_type TEXT,
+        guild_id TEXT,
+        changed_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 7. Lịch sử đổi avatar (User Avatar History)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_avatar_history (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        avatar_url TEXT NOT NULL,
+        guild_id TEXT,
+        changed_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     console.log('✅ Hệ thống Database quản lý đã được khởi tạo thành công!');
   } catch (err) {
     console.error('❌ Lỗi khởi tạo Database:', err);

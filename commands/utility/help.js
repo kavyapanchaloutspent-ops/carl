@@ -17,7 +17,9 @@ function buildHelpEmbed() {
       `└ \`?autonickname Member | {username}\` *(Tự đổi tên người mới)*\n` +
       `└ \`?autotranslate #kênh vi\` *(Tự động dịch kênh chat)*\n` +
       `└ \`?autorole\`, \`?customcmd\`, \`?sticky\`, \`?setup-welcome\`, \`?setup-verification\`\n\n` +
-      `**🎨 Tiện ích & Dịch thuật:**\n` +
+      `**🎨 Tiện ích & Lịch sử Tra cứu:**\n` +
+      `└ \`?namehis <@user|ID>\` *(Tra cứu lịch sử đổi tên/biệt danh toàn cầu)*\n` +
+      `└ \`?avhis <@user|ID>\` *(Tra cứu lịch sử thay Avatar toàn cầu)*\n` +
       `└ \`?translate <en/vi/ja...> <nội dung>\` *(Dịch thuật mọi ngôn ngữ)*\n` +
       `└ \`?snipe\` *(Xem lại tin nhắn vừa bị xóa)*\n` +
       `└ \`?nickname all/bots/humans <tên_mới>\` *(Đổi biệt danh hàng loạt)*\n` +

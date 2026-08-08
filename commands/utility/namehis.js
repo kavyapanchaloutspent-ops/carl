@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, AuditLogEvent } = require('discord.js');
 const db = require('../../database');
 
 const CHANGE_TYPES = {
@@ -7,7 +7,7 @@ const CHANGE_TYPES = {
   nickname: '🎭 Biệt danh Server'
 };
 
-async function buildNameHistoryEmbed(client, targetId, requester) {
+async function buildNameHistoryEmbed(client, guild, targetId, requester) {
   let user = null;
   try {
     user = await client.users.fetch(targetId, { force: true });
@@ -23,6 +23,40 @@ async function buildNameHistoryEmbed(client, targetId, requester) {
   ).catch(() => ({ rows: [] }));
 
   const history = res.rows;
+
+  // 🔍 QUÉT THÊM NHẬT KÝ SERVER (AUDIT LOGS) ĐỂ LẤY CẢ TÊN CŨ TRƯỚC KHI BOT HOẠT ĐỘNG
+  if (guild) {
+    try {
+      const auditLogs = await guild.fetchAuditLogs({
+        type: AuditLogEvent.MemberUpdate,
+        limit: 50
+      }).catch(() => null);
+
+      if (auditLogs) {
+        const userLogs = auditLogs.entries.filter(entry => entry.target && entry.target.id === user.id);
+        for (const [, entry] of userLogs) {
+          const change = entry.changes?.find(c => c.key === 'nick');
+          if (change) {
+            const oldNick = change.old || `(Gốc: ${user.username})`;
+            const newNick = change.new || `(Khôi phục: ${user.username})`;
+            // Kiểm tra tránh trùng lặp
+            const exists = history.some(h => h.old_name === oldNick && h.new_name === newNick);
+            if (!exists) {
+              history.push({
+                old_name: oldNick,
+                new_name: newNick,
+                change_type: 'nickname',
+                changed_at: entry.createdAt
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Sắp xếp lại lịch sử theo thời gian mới nhất
+  history.sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
 
   const embed = new EmbedBuilder()
     .setColor(0x3498DB)
@@ -78,7 +112,7 @@ module.exports = {
       targetId = userOpt.id;
     }
 
-    const embed = await buildNameHistoryEmbed(interaction.client, targetId, interaction.user);
+    const embed = await buildNameHistoryEmbed(interaction.client, interaction.guild, targetId, interaction.user);
     if (!embed) {
       return interaction.reply({ content: `❌ Không tìm thấy người dùng với ID: \`${targetId}\`!`, ephemeral: true });
     }
@@ -95,7 +129,7 @@ module.exports = {
       targetId = args[0].replace(/[<@!>]/g, '');
     }
 
-    const embed = await buildNameHistoryEmbed(message.client, targetId, message.author);
+    const embed = await buildNameHistoryEmbed(message.client, message.guild, targetId, message.author);
     if (!embed) {
       return message.reply(`❌ Không tìm thấy người dùng Discord với ID hoặc Mention: \`${args[0]}\`!`);
     }

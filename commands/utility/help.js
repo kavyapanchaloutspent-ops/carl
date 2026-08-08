@@ -15,13 +15,13 @@ function buildHelpEmbed() {
       `└ \`?antimention\`, \`?antilink\`, \`?antiinvite\`, \`?antiraid\`\n\n` +
       `**⚙️ Cấu hình máy chủ:**\n` +
       `└ \`?autonickname Member | {username}\` *(Tự đổi tên người mới)*\n` +
+      `└ \`?autotranslate #kênh vi\` *(Tự động dịch kênh chat)*\n` +
       `└ \`?autorole\`, \`?customcmd\`, \`?sticky\`, \`?setup-welcome\`, \`?setup-verification\`\n\n` +
-      `**🎨 Tiện ích & Đổi biệt danh:**\n` +
-      `└ \`?snipe\` *(Xem lại tin nhắn vừa bị xóa gần đây nhất trong kênh)*\n` +
+      `**🎨 Tiện ích & Dịch thuật:**\n` +
+      `└ \`?translate <en/vi/ja...> <nội dung>\` *(Dịch thuật mọi ngôn ngữ)*\n` +
+      `└ \`?snipe\` *(Xem lại tin nhắn vừa bị xóa)*\n` +
       `└ \`?nickname all/bots/humans <tên_mới>\` *(Đổi biệt danh hàng loạt)*\n` +
-      `└ \`?userinfo <@user|ID>\` *(Tra cứu tài khoản trong & ngoài Server bằng ID)*\n` +
-      `└ \`?serverinfo\` *(Xem chi tiết máy chủ & thành viên)*\n` +
-      `└ \`?botinfo\`, \`?roleinfo\`, \`?channelinfo\`, \`?av\`, \`?banner\`, \`?ping\`, \`?remind\`, \`?poll\`, \`?embed\``
+      `└ \`?userinfo\`, \`?serverinfo\`, \`?botinfo\`, \`?roleinfo\`, \`?channelinfo\`, \`?av\`, \`?banner\`, \`?ping\`, \`?remind\``
     )
     .setTimestamp();
 }

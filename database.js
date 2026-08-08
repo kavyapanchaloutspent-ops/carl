@@ -35,6 +35,8 @@ async function initDatabase() {
     await client.query(`
       ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS anti_spam_limit INT DEFAULT 5;
       ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS auto_nickname_format TEXT;
+      ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS auto_translate_channel_id TEXT;
+      ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS auto_translate_lang TEXT DEFAULT 'vi';
     `);
 
     // 2. Nhật ký cảnh cáo (Warnings)

@@ -173,6 +173,25 @@ module.exports = {
       await db.pool.query('UPDATE sticky_messages SET last_message_id = $1 WHERE channel_id = $2', [newStickyMsg.id, message.channel.id]).catch(() => {});
     }
 
+    // F.5 AUTO-TRANSLATE KÊNH CHÁT TỰ ĐỘNG
+    if (config.auto_translate_channel_id === message.channel.id && !message.content.startsWith(config.prefix || '?')) {
+      const targetLang = config.auto_translate_lang || 'vi';
+      try {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(message.content)}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data[0]) {
+            const translatedText = data[0].map(item => item[0]).filter(Boolean).join('');
+            const detectedLang = data[2] || '';
+            if (detectedLang && detectedLang.toLowerCase() !== targetLang.toLowerCase() && translatedText !== message.content) {
+              await message.reply({ content: `🌐 **Dịch tự động (${detectedLang.toUpperCase()} ➔ ${targetLang.toUpperCase()}):**\n> ${translatedText}` }).catch(() => {});
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
     // G. Xử lý các lệnh prefix hệ thống thông thường khác
     const prefix = config.prefix || '?';
     if (!message.content.startsWith(prefix)) return;
